@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/product.dart';
+import 'AddToCartAnimation.dart';
 
 class ProductCardWidget extends ConsumerWidget {
- final Product product;
- final VoidCallback onTap;
- final VoidCallback addCart;
- //final void Function(Product) addCart;
- ProductCardWidget({required this.product,required this.onTap, required this.addCart});
+  final Product product;
+  final VoidCallback onTap;
+  final VoidCallback addCart;
+  final GlobalKey imageKey = GlobalKey(); // Key vị trí ảnh sản phẩm
+  final GlobalKey? cartIconKey; // Key vị trí nút giỏ hàng trên AppBar
+
+  ProductCardWidget({
+    required this.product,
+    required this.onTap,
+    required this.addCart,
+    this.cartIconKey,
+    super.key,
+  });
 
   Widget _buildProductImage(String imagePath) {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
@@ -15,7 +24,7 @@ class ProductCardWidget extends ConsumerWidget {
         imagePath,
         width: double.infinity,
         height: double.infinity,
-        fit: BoxFit.fill,
+        fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => _buildFallbackImage(),
       );
     } else {
@@ -23,7 +32,7 @@ class ProductCardWidget extends ConsumerWidget {
         imagePath,
         width: double.infinity,
         height: double.infinity,
-        fit: BoxFit.fill,
+        fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => _buildFallbackImage(),
       );
     }
@@ -34,7 +43,7 @@ class ProductCardWidget extends ConsumerWidget {
       'assets/images/dog.jpeg',
       width: double.infinity,
       height: double.infinity,
-      fit: BoxFit.fill,
+      fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => const Icon(
         Icons.image_not_supported,
         size: 50,
@@ -43,9 +52,23 @@ class ProductCardWidget extends ConsumerWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context,WidgetRef ref ) {
+  void _handleAddCart(BuildContext context) {
+    if (cartIconKey != null && cartIconKey!.currentContext != null) {
+      // Chạy animation di chuyển ảnh sản phẩm vào giỏ hàng
+      AddToCartAnimation.run(
+        context: context,
+        widgetKey: imageKey,
+        cartKey: cartIconKey!,
+        imageUrl: product.image,
+        onComplete: addCart,
+      );
+    } else {
+      addCart();
+    }
+  }
 
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       height: 150,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -62,7 +85,6 @@ class ProductCardWidget extends ConsumerWidget {
       ),
       child: InkWell(
         onTap: onTap,
-
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -71,18 +93,17 @@ class ProductCardWidget extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Ảnh sản phẩm bên trái
+                  // Khung Ảnh sản phẩm (Gắn Key vị trí bắt đầu animation)
                   Container(
+                    key: imageKey,
                     width: 90,
                     height: 90,
-                    padding: const EdgeInsets.all(4),
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Center(
-                      child: _buildProductImage(product.image),
-                    ),
+                    child: _buildProductImage(product.image),
                   ),
                   const SizedBox(width: 16),
                   // Thông tin tên và giá bên phải
@@ -106,19 +127,19 @@ class ProductCardWidget extends ConsumerWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            if (product.discountPercent! > 0 )
-                                Text(
-                                  '\$${product.price.toInt()}',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.grey,
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
+                            if (product.discountPercent != null &&
+                                product.discountPercent! > 0)
+                              Text(
+                                '\$${product.price.toInt()}',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.grey,
+                                  decoration: TextDecoration.lineThrough,
                                 ),
-
+                              ),
                             const SizedBox(width: 10),
                             Text(
-                              '\$${(((product.discountPercent??100)/100)*product.price).toInt()}',
+                              '\$${(((product.discountPercent ?? 100) / 100) * product.price).toInt()}',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -131,14 +152,23 @@ class ProductCardWidget extends ConsumerWidget {
                       ],
                     ),
                   ),
-                    ElevatedButton(style: ButtonStyle(alignment: Alignment.centerLeft ),
-                        onPressed:addCart, child: Icon(Icons.shopping_cart)),
 
+                  // Nút Thêm vào giỏ hàng
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0066CC),
+                      shape: const CircleBorder(),
+                      padding: const EdgeInsets.all(12),
+                    ),
+                    onPressed: () => _handleAddCart(context),
+                    child: const Icon(Icons.shopping_cart, color: Colors.white),
+                  ),
                 ],
               ),
 
-              // Nhãn giảm giá ở góc trên bên phải (nếu có giảm giá)
-              if (product.discountPercent! > 0)
+              // Nhãn giảm giá ở góc trên bên phải
+              if (product.discountPercent != null &&
+                  product.discountPercent! > 0)
                 Positioned(
                   top: 0,
                   right: 0,

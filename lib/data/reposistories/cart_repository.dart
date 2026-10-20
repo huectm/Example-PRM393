@@ -1,7 +1,12 @@
+import 'package:example_dart/data/reposistories/DataHelper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
+import 'dart:async';
+import 'package:flutter/widgets.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 //Tên tệp trùng tên tệp với tệp hiện tại
 part 'cart_repository.g.dart';
 
@@ -11,6 +16,7 @@ CartRepository cartRepository(Ref ref)
 =>CartRepository();
 
 class CartRepository {
+
   final List<CartItem> _cartItems = [
     CartItem(
       product: Product(
@@ -56,7 +62,7 @@ class CartRepository {
 
   // 1. Lấy danh sách tất cả mặt hàng trong giỏ
   Future<List<CartItem>> getCartItems() async {
-    return await _cartItems;
+   return _cartItems;
   }
 
   // 2. Thêm sản phẩm vào giỏ hàng
