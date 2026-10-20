@@ -1,0 +1,6 @@
+type Account @table {
+  email: String!
+  name: String!
+  phone: String
+  avatar: String
+}

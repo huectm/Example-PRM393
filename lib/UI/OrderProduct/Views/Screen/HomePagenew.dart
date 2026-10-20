@@ -4,8 +4,9 @@ import 'package:example_dart/UI/OrderProduct/ViewModels/LanguageViewModel.dart';
 import 'package:example_dart/UI/OrderProduct/ViewModels/ProductViewModel.dart';
 import 'package:example_dart/UI/OrderProduct/ViewModels/ThemModeViewModel.dart';
 import 'package:example_dart/UI/OrderProduct/Views/Screen/ProductListWidget.dart';
-import 'package:example_dart/UI/User/ViewModels/UserViewModel.dart';
-import 'package:example_dart/data/models/User.dart';
+import 'package:example_dart/UI/User/ViewModels/AccountViewModel.dart';
+import 'package:example_dart/UI/User/ViewModels/UserViewModel.dart' hide User;
+import 'package:example_dart/data/models/account.dart';
 import 'package:example_dart/data/reposistories/SettingReposistory.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,8 +28,8 @@ class _HomepagenewState extends ConsumerState<Homepagenew> {
   // GlobalKey định vị biểu tượng giỏ hàng trên AppBar
   final GlobalKey _cartIconKey = GlobalKey();
 
-  // Lưu thông tin người dùng đang đăng nhập (null là chưa đăng nhập)
-  User? currentUser;
+  // Lưu thông tin người dùng đang đăng nhập từ bảng Account
+  Account? currentAccount;
 
   // Hộp thoại Đăng nhập
   Future<void> _showMyDialog() async {
@@ -100,34 +101,43 @@ class _HomepagenewState extends ConsumerState<Homepagenew> {
                 if (!valid) return;
 
                 formKey.currentState!.save();
+                final emailInput = userNameController.text.trim();
+                final passInput = passWordController.text.trim();
+
                 final userViewModel = ref.read(userViewModelProvider.notifier);
+                final accountViewModel =
+                    ref.read(accountViewModelProvider.notifier);
 
-                // Gọi hàm đăng nhập thu được UserCredential
-                final userCredential = await userViewModel.Login(
-                  userNameController.text.trim(),
-                  passWordController.text.trim(),
-                );
+                // 1. Kiểm tra đăng nhập qua UserViewModel / Firebase
+                final userCredential =
+                    await userViewModel.Login(emailInput, passInput);
 
-                if (userCredential != null && userCredential.user != null) {
-                  final fbUser = userCredential.user!;
-                  final appUser = User(
-                    id: fbUser.uid,
-                    name: fbUser.displayName ?? fbUser.email?.split('@').first,
-                    Email: fbUser.email ?? userNameController.text.trim(),
-                    Password: passWordController.text.trim(),
-                    avatar: fbUser.photoURL,
-                    phone: fbUser.phoneNumber,
-                  );
+                // 2. Lấy thông tin chi tiết Account (gồm Avatar) từ bảng Account trên Firebase theo Email
+                final account =
+                    await accountViewModel.loginAndFetchProfile(emailInput);
+
+                if (account != null || userCredential != null) {
+                  final activeAccount = account ??
+                      Account(
+                        id: userCredential?.user?.uid ?? 'account1',
+                        email: emailInput,
+                        name: userCredential?.user?.displayName ??
+                            emailInput.split('@').first,
+                        avatar: userCredential?.user?.photoURL ??
+                            'https://i.pravatar.cc/150?img=5',
+                        phone: userCredential?.user?.phoneNumber ?? '',
+                      );
 
                   setState(() {
-                    currentUser = appUser;
+                    currentAccount = activeAccount;
                   });
+
                   if (context.mounted) {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                            "Đăng nhập thành công! Chào mừng ${appUser.name ?? appUser.Email}"),
+                            "Đăng nhập thành công! Chào mừng ${activeAccount.name}"),
                         backgroundColor: Colors.green,
                         duration: const Duration(seconds: 2),
                       ),
@@ -152,20 +162,71 @@ class _HomepagenewState extends ConsumerState<Homepagenew> {
     );
   }
 
-  // Hộp thoại tùy chọn tài khoản người dùng
+  // Hộp thoại hiển thị thông tin chi tiết người dùng lấy từ Account
   Future<void> _showUserMenuDialog() async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Xin chào, ${currentUser?.name ?? currentUser?.Email}"),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Column(
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: (currentAccount?.avatar != null &&
+                        currentAccount!.avatar.isNotEmpty)
+                    ? NetworkImage(currentAccount!.avatar)
+                    : null,
+                child: (currentAccount?.avatar == null ||
+                        currentAccount!.avatar.isEmpty)
+                    ? Text(
+                        (currentAccount?.name.isNotEmpty == true
+                                ? currentAccount!.name[0]
+                                : 'U')
+                            .toUpperCase(),
+                        style: const TextStyle(
+                            fontSize: 28, fontWeight: FontWeight.bold),
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                currentAccount?.name ?? "Thông tin tài khoản",
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Email: ${currentUser?.Email}"),
-              if (currentUser?.phone != null)
-                Text("Số điện thoại: ${currentUser?.phone}"),
+              const Divider(),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.email, color: Color(0xFF0066CC)),
+                title: const Text("Email"),
+                subtitle: Text(currentAccount?.email ?? "Chưa cập nhật"),
+              ),
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.phone, color: Color(0xFF0066CC)),
+                title: const Text("Số điện thoại"),
+                subtitle: Text(
+                    currentAccount?.phone.isNotEmpty == true
+                        ? currentAccount!.phone
+                        : "Chưa cập nhật"),
+              ),
+              ListTile(
+                dense: true,
+                leading:
+                    const Icon(Icons.perm_identity, color: Color(0xFF0066CC)),
+                title: const Text("ID Account"),
+                subtitle: Text(currentAccount?.id ?? "Chưa có ID"),
+              ),
             ],
           ),
           actions: <Widget>[
@@ -177,10 +238,12 @@ class _HomepagenewState extends ConsumerState<Homepagenew> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Đăng xuất', style: TextStyle(color: Colors.white)),
+              child: const Text('Đăng xuất',
+                  style: TextStyle(color: Colors.white)),
               onPressed: () {
+                ref.read(accountViewModelProvider.notifier).logout();
                 setState(() {
-                  currentUser = null;
+                  currentAccount = null;
                 });
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -347,10 +410,10 @@ class _HomepagenewState extends ConsumerState<Homepagenew> {
             },
           ),
 
-          // Nút Avatar đăng nhập/đăng xuất
+          // Nút Avatar: Đã đăng nhập -> Hiện Avatar từ Account, Chưa đăng nhập -> Avatar ẩn
           InkWell(
             onTap: () {
-              if (currentUser != null) {
+              if (currentAccount != null) {
                 _showUserMenuDialog();
               } else {
                 _showMyDialog();
@@ -358,16 +421,17 @@ class _HomepagenewState extends ConsumerState<Homepagenew> {
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: currentUser != null
+              child: currentAccount != null
                   ? CircleAvatar(
                       backgroundColor: Colors.white,
-                      backgroundImage: (currentUser!.avatar != null &&
-                              currentUser!.avatar!.isNotEmpty)
-                          ? NetworkImage(currentUser!.avatar!)
+                      backgroundImage: (currentAccount!.avatar.isNotEmpty)
+                          ? NetworkImage(currentAccount!.avatar)
                           : null,
-                      child: currentUser!.avatar == null
+                      child: currentAccount!.avatar.isEmpty
                           ? Text(
-                              (currentUser!.name ?? currentUser!.Email)[0]
+                              (currentAccount!.name.isNotEmpty
+                                      ? currentAccount!.name[0]
+                                      : 'U')
                                   .toUpperCase(),
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold),
@@ -413,16 +477,26 @@ class _HomepagenewState extends ConsumerState<Homepagenew> {
       drawer: Drawer(
         child: Column(
           children: [
-            const UserAccountsDrawerHeader(
-              decoration: BoxDecoration(color: Color(0xFF0066CC)),
+            UserAccountsDrawerHeader(
+              decoration: const BoxDecoration(color: Color(0xFF0066CC)),
               accountName: Text(
-                "Danh mục sản phẩm",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                currentAccount?.name ?? "Danh mục sản phẩm",
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              accountEmail: Text("Chọn danh mục để xem"),
+              accountEmail: Text(
+                  currentAccount?.email ?? "Chọn danh mục sản phẩm để xem"),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
-                child: Icon(Icons.category, color: Color(0xFF0066CC), size: 36),
+                backgroundImage: (currentAccount?.avatar != null &&
+                        currentAccount!.avatar.isNotEmpty)
+                    ? NetworkImage(currentAccount!.avatar)
+                    : null,
+                child: (currentAccount?.avatar == null ||
+                        currentAccount!.avatar.isEmpty)
+                    ? const Icon(Icons.category,
+                        color: Color(0xFF0066CC), size: 36)
+                    : null,
               ),
             ),
             Expanded(

@@ -1,1 +1,32 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"freshfood-58314","appId":"1:427346247382:android:8fbf12db21f37b2d359377","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"freshfood-58314","configurations":{"android":"1:427346247382:android:8fbf12db21f37b2d359377","ios":"1:427346247382:ios:176dd416e1b10e31359377","web":"1:427346247382:web:5df0e82ecea09f04359377","windows":"1:427346247382:web:42ad74637974ba5d359377"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "freshfood-58314",
+          "appId": "1:427346247382:android:8fbf12db21f37b2d359377",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "freshfood-58314",
+          "configurations": {
+            "android": "1:427346247382:android:8fbf12db21f37b2d359377",
+            "ios": "1:427346247382:ios:176dd416e1b10e31359377",
+            "web": "1:427346247382:web:5df0e82ecea09f04359377",
+            "windows": "1:427346247382:web:42ad74637974ba5d359377"
+          }
+        }
+      }
+    }
+  },
+  "emulators": {
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
+    }
+  },
+  "dataconnect": {
+    "source": "dataconnect"
+  }
+}

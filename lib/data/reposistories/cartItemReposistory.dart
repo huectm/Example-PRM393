@@ -58,7 +58,7 @@ class CartItemRepository {
      }
 
   }
-
+/*
   // 3. Cập nhật số lượng sản phẩm
   Future< void> updateQuantity(String proId, int quantity,) async {
     var db=await Datahelper.instance.database;
@@ -75,7 +75,6 @@ class CartItemRepository {
       item.isSelected = isSelected;
     }
   }
-
   // 6. Xóa 1 sản phẩm khỏi giỏ hàng
   Future< void> removeFromCart(String productId) async {
     _cartItems.removeWhere((item) => item.product.id == productId);
@@ -110,4 +109,7 @@ class CartItemRepository {
 
   // 10. Kiểm tra giỏ hàng có rỗng
   bool isEmpty() => _cartItems.isEmpty;
+
+
+  */
 }
